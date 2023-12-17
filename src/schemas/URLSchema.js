@@ -9,14 +9,6 @@ const URLSchema = new mongoose.Schema({
     type: "string",
     required: true,
   },
-  views: {
-    type: Number,
-    default: 0,
-  },
-  lastAccessed: {
-    type: Date,
-    default: Date.now,
-  },
 });
 
 URLSchema.index({ key: 1 }, { unique: true });

@@ -53,9 +53,9 @@ describe("#URLService", () => {
       });
     });
   });
-  describe("#addNewURL", () => {
+  describe("#addNewUrl", () => {
     it("should return null if 0 retry count is provided", async () => {
-      const result = await URLService.addNewURL("https://www.google.com", 0);
+      const result = await URLService.addNewUrl("https://www.google.com", 0);
       expect(result).toEqual(null);
     });
     it("should return existing key", async () => {
@@ -64,14 +64,69 @@ describe("#URLService", () => {
         url: "https://www.google.com",
       });
 
-      const result = await URLService.addNewURL("https://www.google.com");
+      const result = await URLService.addNewUrl("https://www.google.com");
       expect(result).toEqual("abcd");
 
       await URL.deleteOne({
         key: "abcd",
       });
     });
+    it("should create a new entry", async () => {
+      const result = await URLService.addNewUrl("https://www.google.com");
+      expect(typeof result).toEqual("string");
+      await URL.deleteOne({
+        url: "https://www.google.com",
+      });
+    });
+    it("should return null due to errors", async () => {
+      jest.spyOn(console, "warn");
+      jest.spyOn(console, "error");
+      jest.spyOn(URL, "create").mockRejectedValue(new Error("test"));
+      expect.assertions(3);
+      const result = await URLService.addNewUrl("https://www.google.com", 1);
+      expect(result).toEqual(null);
+      expect(console.warn).toHaveBeenCalledWith(
+        "Transaction failed (attempt 1/1). Retrying..."
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        "Unknown Error: Error: test. Retrying..."
+      );
+    });
   });
+
+  describe("#handleTransactionError", () => {
+    it("should log an error", () => {
+      jest.spyOn(console, "error");
+      URLService.handleTransactionError(new Error("test"), "");
+      expect(console.error).toHaveBeenCalledWith(
+        "Unknown Error: Error: test. Retrying..."
+      );
+    });
+    it("should log Duplicate key found", () => {
+      jest.spyOn(console, "warn");
+      const error = new mongoose.Error.ValidationError();
+      error.code = 11000;
+      error.message =
+        'MongoServerError: E11000 duplicate key error collection: test.urls index: key_1 dup key: { key: "abcd" }';
+      URLService.handleTransactionError(error, "", "abcd");
+      expect(console.warn).toHaveBeenCalledWith(
+        "Duplicate key found. Retrying..."
+      );
+    });
+    it("should throw an error", () => {
+      const error = new mongoose.Error.ValidationError();
+      error.code = 11000;
+      error.message =
+        'MongoServerError: E11000 duplicate key error collection: test.urls index: url_1 dup key: { url: "https://www.google.com" }';
+      expect.assertions(1);
+      try {
+        URLService.handleTransactionError(error, "https://www.google.com", "");
+      } catch (error) {
+        expect(error.code).toEqual(11000);
+      }
+    });
+  });
+
   describe("#handleAttemptError", () => {
     it("should call a warn due to error message Ran out of candidates", () => {
       const error = new Error("Ran out of candidates");
@@ -93,13 +148,30 @@ describe("#URLService", () => {
       );
     });
     it("should throw an error", () => {
-      expect.assertions(2);
+      expect.assertions(1);
       try {
         URLService.handleAttemptError(new Error("test"), "", 1, 3);
       } catch (error) {
-        expect(URLService.handleAttemptError).toThrow();
         expect(error.message).toEqual("test");
       }
+    });
+  });
+
+  describe("#getExistingUrl", () => {
+    it("should return undefined", async () => {
+      const result = await URLService.getExistingUrl("test");
+      expect(result).toEqual(undefined);
+    });
+    it("should return a url", async () => {
+      await URL.create({
+        key: "abcd",
+        url: "https://www.google.com",
+      });
+      const result = await URLService.getExistingUrl("abcd");
+      expect(result).toEqual("https://www.google.com");
+      await URL.deleteOne({
+        url: "https://www.google.com",
+      });
     });
   });
 });

@@ -51,10 +51,11 @@ const checkCandidatesWithExistingKeys = async (candidates, session) => {
   return candidates.filter((candidate) => !existingKeys.includes(candidate));
 };
 
-const addNewURL = async (url, retryCount = MAX_RETRY_ATTEMPTS) => {
+const addNewUrl = async (url, retryCount = MAX_RETRY_ATTEMPTS) => {
   let attempt = 1;
   while (attempt <= retryCount) {
     const session = await mongoose.startSession();
+    await session.startTransaction();
     const milliseconds = moment().milliseconds();
     try {
       // check if url is existing
@@ -74,21 +75,22 @@ const addNewURL = async (url, retryCount = MAX_RETRY_ATTEMPTS) => {
       } while (candidatesRemaining.length === 0);
       // try using the generated candidates
       while (candidatesRemaining.length > 0) {
+        let candidate;
         try {
-          const candidate = candidatesRemaining.shift();
+          candidate = candidatesRemaining.shift();
           const result = await URL.create(
-            {
-              url,
-              key: candidate,
-            },
+            [
+              {
+                url,
+                key: candidate,
+              },
+            ],
             { session }
           );
           await session.commitTransaction();
-          session.endSession();
-          return result;
+          return result[0].key;
         } catch (error) {
-          await session.abortTransaction();
-          await handleTransactionError(error, url);
+          handleTransactionError(error, url, candidate);
         }
       }
       throw new Error("Ran out of candidates");
@@ -96,20 +98,22 @@ const addNewURL = async (url, retryCount = MAX_RETRY_ATTEMPTS) => {
       handleAttemptError(error, url, attempt, retryCount);
       attempt++;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
   console.error(`Transaction failed after ${retryCount} attempts.`);
   return null;
 };
 
-const handleTransactionError = async (error, url) => {
+const handleTransactionError = (error, url, candidate) => {
+  console.log(error);
   if (
     error instanceof mongoose.Error.ValidationError &&
     error.code === ERROR_CODE_DUPLICATE_KEY &&
     error.message.includes(`dup key: { key: "${candidate}" }`)
   ) {
     console.warn("Duplicate key found. Retrying...");
+    return;
   } else if (
     error instanceof mongoose.Error.ValidationError &&
     error.code === ERROR_CODE_DUPLICATE_KEY &&
@@ -117,14 +121,8 @@ const handleTransactionError = async (error, url) => {
   ) {
     throw error;
   } else {
-    if (
-      error instanceof mongoose.Error.TransactionRetryError ||
-      (error instanceof mongoose.Error.MongoServerError && error.code === 91)
-    ) {
-      console.warn("Creation failed due to errors. Retrying...");
-    } else {
-      throw error;
-    }
+    console.error(`Unknown Error: ${error}. Retrying...`);
+    return;
   }
 };
 
@@ -138,7 +136,9 @@ const handleAttemptError = (error, url, attempt, retryCount) => {
     error.code === ERROR_CODE_DUPLICATE_KEY &&
     error.message.includes(`dup key: { url: "${url}" }`)
   ) {
-    console.warn(`Duplicate URL found (attempt ${attempt}/${retryCount}). Retrying...`);
+    console.warn(
+      `Duplicate URL found (attempt ${attempt}/${retryCount}). Retrying...`
+    );
   } else {
     throw error;
   }
@@ -152,14 +152,25 @@ const getExistingKey = async (url, session) => {
     { key: 1 },
     { session }
   );
-  return existingKeyObject.key;
+  return existingKeyObject?.key;
+};
+
+const getExistingUrl = async (key) => {
+  const existingKeyObject = await URL.findOne(
+    {
+      key,
+    },
+    { url: 1 }
+  );
+  return existingKeyObject?.url;
 };
 
 module.exports = {
   generateCandidates,
   checkCandidatesWithExistingKeys,
-  addNewURL,
+  addNewUrl,
   getExistingKey,
   handleAttemptError,
-  handleTransactionError
+  handleTransactionError,
+  getExistingUrl,
 };

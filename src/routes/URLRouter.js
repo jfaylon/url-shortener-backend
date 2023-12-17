@@ -1,21 +1,20 @@
 const express = require("express");
-const mongoose = require("mongoose");
-const { addNewURL } = require("../services/URLService");
+const { addNewUrl, getExistingUrl } = require("../services/URLService");
 
 const router = express.Router();
 
-router.get("/:id", async (req, res) => {
-  // check cache
-  // ch
-  // const acceptHeader = req.get('Accept');
-  // if (acceptHeader.includes('application/json')) {
-  //   res.json({ message: 'This is a JSON response' });
-  // } else if (acceptHeader.includes('text/html')) {
-  //   res.send('<p>This is an HTML response</p>');
-  // } else {
-  //   res.status(406).send('Not Acceptable: Supported types are JSON and HTML');
-  // }
-  return res.json(200, {});
+router.get("/:key", async (req, res) => {
+  const { key } = req.params;
+  const url = await getExistingUrl(key);
+  if (url) {
+    return res.json(200, {
+      url,
+    });
+  } else {
+    return res.json(404, {
+      message: "Not Found",
+    });
+  }
 });
 
 router.post("/", async (req, res) => {
@@ -32,10 +31,10 @@ router.post("/", async (req, res) => {
     });
   }
   try {
-    const result = await addNewURL(parsedUrl.href);
+    const result = await addNewUrl(parsedUrl.href);
     if (result) {
       return res.json(200, {
-        key: result.key,
+        key: result,
       });
     } else {
       throw new Error("Key generation failed");
