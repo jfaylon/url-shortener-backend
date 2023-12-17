@@ -1,11 +1,10 @@
 const express = require("express");
-const { addNewUrl, getExistingUrl } = require("../services/URLService");
-
+const URLService = require("../services/URLService");
 const router = express.Router();
 
 router.get("/:key", async (req, res) => {
   const { key } = req.params;
-  const url = await getExistingUrl(key);
+  const url = await URLService.getExistingUrl(key);
   if (url) {
     return res.json(200, {
       url,
@@ -25,13 +24,13 @@ router.post("/", async (req, res) => {
   try {
     parsedUrl = new URL(url);
   } catch (error) {
+    console.log(error);
     return res.json(400, {
-      error: -2,
       message: "Invalid URL",
     });
   }
   try {
-    const result = await addNewUrl(parsedUrl.href);
+    const result = await URLService.addNewUrl(parsedUrl.href);
     if (result) {
       return res.json(200, {
         key: result,
@@ -45,9 +44,6 @@ router.post("/", async (req, res) => {
       message: "Internal Server Error",
     });
   }
-  // check if there's existing data
-
-  // add to database if new data
 });
 
 module.exports = router;
