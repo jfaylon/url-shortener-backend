@@ -1,0 +1,89 @@
+{
+  "/{key}": {
+    "get": {
+      "summary": "Get URL by Key",
+      "parameters": [
+        {
+          "name": "key",
+          "in": "path",
+          "required": true,
+          "description": "The key associated with the URL",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Successful response",
+          "content": {
+            "application/json": {
+              "example": {
+                "url": "https://www.example.com"
+              }
+            }
+          }
+        },
+        "404": {
+          "description": "URL not found",
+          "content": {
+            "application/json": {
+              "example": {
+                "message": "Not Found"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "/": {
+    "post": {
+      "summary": "Create a Shortened URL",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/URL"
+            },
+            "example": {
+              "url": "https://www.example.com"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Successful response",
+          "content": {
+            "application/json": {
+              "example": {
+                "key": "abc123"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Invalid URL",
+          "content": {
+            "application/json": {
+              "example": {
+                "message": "Invalid URL"
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error",
+          "content": {
+            "application/json": {
+              "example": {
+                "message": "Internal Server Error"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

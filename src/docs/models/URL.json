@@ -1,0 +1,21 @@
+{
+  "URL": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "The original URL",
+        "example": "https://www.example.com"
+            },
+      "key": {
+        "type": "string",
+        "description": "The associated key for the URL",
+        "example": "abc123"
+      }
+    },
+    "required": [
+      "key",
+      "url"
+    ]
+  }
+}
