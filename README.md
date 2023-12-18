@@ -4,7 +4,7 @@
 
 ### Tech Stack
 - Node.js v21.2.0
-- MongoDB v7.0.3
+- MongoDB v7.0.3 (Must be connected to a Replica Set)
 
 ### Frontend Repository (Optional)
 
