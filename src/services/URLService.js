@@ -113,7 +113,6 @@ const handleTransactionError = (error, url, candidate) => {
     error.message.includes(`dup key: { key: "${candidate}" }`)
   ) {
     console.warn("Duplicate key found. Retrying...");
-    return;
   } else if (
     error instanceof mongoose.Error.ValidationError &&
     error.code === ERROR_CODE_DUPLICATE_KEY &&
@@ -122,7 +121,6 @@ const handleTransactionError = (error, url, candidate) => {
     throw error;
   } else {
     console.error(`Unknown Error: ${error}. Retrying...`);
-    return;
   }
 };
 
