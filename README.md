@@ -6,6 +6,10 @@
 - Node.js v21.2.0
 - MongoDB v7.0.3
 
+### Frontend Repository (Optional)
+
+https://github.com/jfaylon/url-shortener-frontend
+
 
 ## Installation
 
